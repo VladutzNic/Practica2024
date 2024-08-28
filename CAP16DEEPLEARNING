@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capitolul 16 - Modele Probabilistice Structurate pentru Învățare Profundă</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #ccc 3px solid;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            text-align: center;
+            margin: 0;
+        }
+        h2 {
+            color: #333;
+        }
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        .figure {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .figure img {
+            max-width: 100%;
+            height: auto;
+        }
+        .figure caption {
+            margin-top: 5px;
+            font-style: italic;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Capitolul 16 - Modele Probabilistice Structurate pentru Învățare Profundă</h1>
+        </div>
+    </header>
+    <div class="container content">
+        <h2>Modele Probabilistice Structurate</h2>
+        <p>Modelele probabilistice structurate sunt adesea cunoscute sub numele de <strong>câmpuri ale lui Markov</strong> (MRF-uri) sau <strong>rețele Markov</strong> (Kindermann, 1980). După cum sugerează și numele, modelele nedirecționate utilizează grafuri a căror muchii sunt nedirecționate. Modelele direcționate sunt cele mai naturale atunci când există un motiv clar pentru a trasa fiecare săgeată într-o anumită direcție. Adesea, acestea sunt situații în care înțelegem cauzalitatea, iar aceasta curge într-o singură direcție. Un astfel de exemplu este cursa de ștafetă. Rulătorii anteriori influențează timpii de finalizare ai alergătorilor ulteriori; alergătorii ulteriori nu influențează timpii de finalizare ai alergătorilor anteriori.</p>
+
+        <p>Nu toate situațiile pe care am dori să le modelăm au o direcție clară pentru interacțiunile lor. Când interacțiunile par să nu aibă o direcție intrinsecă sau să opereze în ambele direcții, poate fi mai potrivit să folosim un model nedirecționat.</p>
+
+        <p>Un exemplu de astfel de situație ar fi dacă am dori să modelăm o distribuție asupra a trei variabile binare: dacă ești bolnav, dacă colegul tău de muncă este bolnav și dacă colegul tău de cameră este bolnav. După cum în exemplul cursei de ștafetă, putem face presupuneri simplificatoare despre tipurile de interacțiuni care au loc. Presupunând că colegul tău de muncă și colegul tău de cameră nu se cunosc, este foarte puțin probabil ca unul dintre ei să transmită direct altuia o infecție, cum ar fi o răceală. Acest eveniment poate fi considerat atât de rar încât este acceptabil să nu fie modelat. Totuși, este destul de probabil ca oricare dintre ei să te infecteze pe tine și că tu ai putea transmite răceala altuia. Putem modela transmiterea indirectă a unei răceli de la colegul tău de muncă la colegul tău de cameră modelând transmiterea răcelii de la colegul tău de muncă la tine și transmiterea răcelii de la tine la colegul tău de cameră.</p>
+
+        <p>În acest caz, este la fel de ușor pentru tine să îți faci colegul de cameră să se îmbolnăvească cum este pentru colegul tău de cameră să te facă pe tine să te îmbolnăvești, deci nu există o narațiune unidirecțională clară pe care să o folosim ca bază pentru model. Acest lucru motivează utilizarea unui model nedirecționat.</p>
+
+        <h2>Modelele Nedirecționate</h2>
+        <p>Asemenea modelelor direcționate, dacă două noduri într-un model nedirecționat sunt conectate printr-o muchie, atunci variabilele ale căror noduri corespund interacționează direct. Spre deosebire de modelele direcționate, muchia într-un model nedirecționat nu are săgeată și nu este asociată cu o distribuție de probabilitate condiționată.</p>
+
+        <div class="figure">
+            <img src="figura_16_3.png" alt="Graf nedirecționat reprezentând cum influențează sănătatea colegului, sănătatea colegului de muncă și sănătatea ta una asupra alteia.">
+            <caption>Figura 16.3: Un graf nedirecționat reprezentând cum sănătatea colegului tău, sănătatea colegului de muncă și sănătatea ta se influențează reciproc. Tu și colegul tău de cameră vă puteți infecta reciproc cu o răceală, iar tu și colegul tău de muncă puteți face același lucru, dar presupunând că colegul tău de cameră și colegul tău de muncă nu se cunosc, ei se pot infecta indirect doar prin tine.</caption>
+        </div>
+
+        <p>Un model grafic nedirecționat este un model probabilistic structurat definit pe un graf nedirecționat G. Pentru fiecare clică C din graf, o funcție de factor φ(C) (numită și potențial de clică) măsoară afinitatea variabilelor din acea clică pentru a fi în fiecare dintre stările lor posibile comune. Factorii sunt constrânși să fie non-negativi. Împreună, aceștia definesc o distribuție de probabilitate nemodificată:</p>
+        <pre><code>p̃(x) = ΠC∈G φ(C).</code></pre>
+
+        <p>Distribuția de probabilitate nemodificată este eficientă de lucrat atât timp cât toate clicile sunt mici. Ea codifică ideea că stările cu o afinitate mai mare sunt mai probabile. Totuși, spre deosebire de o rețea Bayesiană, nu există o structură care să garanteze că înmulțirea acestora va da o distribuție de probabilitate validă.</p>
+
+        <p>Exemplul nostru de răspândire a răcelii între tine, colegul tău de cameră și colegul tău de muncă conține două clici. O clică conține <em>hy</em> și <em>hc</em>. Factorul pentru această clică poate fi definit printr-un tabel și ar putea avea valori asemănătoare cu acestea:</p>
+
+        <pre><code>
+hy=0 hy=1
+hc=0 2 1
+hc=1 1 10
+        </code></pre>
+
+        <p>Un stat de 1 indică sănătatea bună, în timp ce un stat de 0 indică sănătatea slabă (fiind infectat cu o răceală). Amândoi sunteți de obicei sănătoși, așa că starea corespunzătoare are cea mai mare afinitate. Starea în care doar unul dintre voi este bolnav are cea mai mică afinitate, deoarece aceasta este o stare rară. Starea în care amândoi sunteți bolnavi (deoarece unul dintre voi l-a infectat pe celălalt) este o stare de afinitate mai mare, deși încă nu este la fel de frecventă ca starea în care amândoi sunteți sănătoși.</p>
+
+        <p>Pentru a completa modelul, ar trebui să definim și un factor similar pentru clică ce conține <em>hy</em> și <em>hr</em>.</p>
+
+        <h2>Funcția de Partajare</h2>
+        <p>Deși distribuția de probabilitate nemodificată este garantată a fi non-negativă peste tot, nu este garantat că se va suma sau integra la 1. Pentru a obține o distribuție de probabilitate validă, trebuie să folosim distribuția de probabilitate normalizată corespunzătoare:</p>
+        <pre><code>p(x) = \frac{1}{Z} p̃(x),</code></pre>
+        <p>unde Z este valoarea care face ca distribuția de probabilitate să se sumese sau să se integreze la 1:</p>
+        <pre><code>Z = ∫ p̃(x) dx.</code></pre>
+
+        <p>Poți considera că Z este o constantă atunci când funcțiile φ sunt menținute constante. Reține că, dacă funcțiile φ au parametri, atunci Z este o funcție a acelor parametri. Este obișnuit în literatură să scrii Z fără argumente pentru a economisi spațiu.</p>
+
+        <p>Constanta de normalizare Z este cunoscută sub numele de funcția de partajare, un termen împrumutat din fizica statistică.</p>
+
+        <p>Deoarece Z este o integrală sau o sumă peste toate alocările posibile ale stării x, este adesea intractabil de calculat. Pentru a putea obține distribuția de probabilitate normalizată a unui model nedirecționat, structura modelului și definițiile funcțiilor φ trebuie să fie favorabile pentru calculul Z eficient. În contextul învățării profunde, Z este de obicei intractabil. Deoarece intractabilitatea calculării Z...</p>
+    </div>
+
+  </header>
+    <div class="container content">   
+ <h2>Grafuri Complete</h2>
+        <p>Figura 16.10 prezintă exemple de grafuri complete, care pot descrie orice distribuție de probabilitate. Aici sunt prezentate exemple cu patru variabile aleatoare. (Stânga) Graf nedirecționat complet. În cazul nedirecționat, graful complet este unic. (Dreapta) Graf direcționat complet. În cazul direcționat, nu există un graf complet unic. Alegem o ordonare a variabilelor și desenăm un arc de la fiecare variabilă la fiecare variabilă care apare după ea în ordonare. Există, așadar, un număr factorial de grafuri complete pentru fiecare set de variabile aleatoare. În acest exemplu, ordonăm variabilele de la stânga la dreapta, de sus în jos.</p>
+
+        <div class="figure">
+            <img src="figura_16_10.png" alt="Exemple de grafuri complete care pot descrie orice distribuție de probabilitate.">
+            <caption>Figura 16.10: Exemple de grafuri complete care pot descrie orice distribuție de probabilitate. (Stânga) Graf nedirecționat complet. (Dreapta) Graf direcționat complet.</caption>
+        </div>
+
+        <h2>Avantaje și Dezavantaje ale Modelului Direcționat și Nedirecționat</h2>
+        <p>Modelele direcționate și cele nedirecționate au ambele avantaje și dezavantaje. Nici o abordare nu este clar superioară și universal preferată. În schimb, ar trebui să alegem care limbaj să folosim pentru fiecare sarcină. Această alegere va depinde parțial de distribuția de probabilitate pe care dorim să o descriem. Putem alege să folosim modelarea direcționată sau modelarea nedirecționată în funcție de care abordare poate captura cele mai multe independențe în distribuția de probabilitate sau care abordare folosește cele mai puține muchii pentru a descrie distribuția. Alte factori pot influența decizia privind limbajul de utilizat. Chiar și atunci când lucrăm cu o singură distribuție de probabilitate, putem schimba uneori între diferite limbaje de modelare. Uneori, un limbaj diferit devine mai potrivit dacă observăm un anumit subset de variabile sau dacă dorim să efectuăm o sarcină computațională diferită. De exemplu, descrierea modelului direcționat oferă adesea o abordare simplă pentru a trasa eficient mostre din model, în timp ce formularea modelului nedirecționat este adesea utilă pentru derivarea procedurilor de inferență aproximativă (așa cum vom vedea în capitolul 19, unde rolul modelelor nedirecționate este evidențiat în ecuația 19.56).</p>
+
+        <h2>Grafuri Complete</h2>
+        <p>Fiecare distribuție de probabilitate poate fi reprezentată fie de un model direcționat, fie de un model nedirecționat. În cel mai rău caz, se poate reprezenta orice distribuție folosind un „graf complet”. Pentru un model direcționat, graf complet este orice graf aciclic direcționat în care impunem o anumită ordonare asupra variabilelor aleatoare, și fiecare variabilă are toate celelalte variabile care o preced în ordonare ca strămoși în graf. Pentru un model nedirecționat, graf complet este pur și simplu un graf care conține o singură clică ce cuprinde toate variabilele.</p>
+
+        <div class="figure">
+            <img src="figura_16_11.png" alt="Exemple de conversie a modelelor direcționate în modele nedirecționate prin construirea de grafuri moralizate.">
+            <caption>Figura 16.11: Exemple de conversie a modelelor direcționate (rândul de sus) în modele nedirecționate (rândul de jos) prin construirea de grafuri moralizate. (Stânga) Această simplă lanț poate fi convertită într-un graf moralizat doar prin înlocuirea muchiilor direcționate cu muchii nedirecționate. Modelul nedirecționat rezultat implică exact același set de independențe și independențe condiționale. (Centru) Acest graf este cel mai simplu model direcționat care nu poate fi convertit într-un model nedirecționat fără a pierde unele independențe. Acest graf constă în întregime dintr-o singură imoralitate. Deoarece <em>a</em> și <em>b</em> sunt părinți ai lui <em>c</em>, aceștia sunt conectați printr-un drum activ atunci când <em>c</em> este observat. Pentru a captura această dependență, modelul nedirecționat trebuie să includă o clică care cuprinde toate cele trei variabile. Această clică nu reușește să codifice faptul că <em>a</em> este independent de <em>b</em>. (Dreapta) În general, moralizarea poate adăuga multe muchii la graf, pierzând astfel multe independențe implicate. De exemplu, acest graf de codare rară necesită adăugarea de muchii moralizate între fiecare pereche de unități ascunse, introducând astfel un număr pătratic de noi dependențe directe.</caption>
+        </div>
+
+        <p>Desigur, utilitatea unui model grafic este că grafurile implică că unele variabile nu interacționează direct. Grafurile complete nu sunt foarte utile deoarece nu implică independențe.</p>
+
+        <p>Când reprezentăm o distribuție de probabilitate cu un graf, dorim să alegem un graf care implică cât mai multe independențe posibile, fără a implica independențe care nu există de fapt.</p>
+
+        <p>Din acest punct de vedere, unele distribuții pot fi reprezentate mai eficient folosind modele direcționate, în timp ce alte distribuții pot fi reprezentate mai eficient folosind modele nedirecționate. În alte cuvinte, modelele direcționate pot codifica unele independențe pe care modelele nedirecționate nu le pot codifica și viceversa.</p>
+
+        <h3>Imoralitate și Grafuri Moralizate</h3>
+        <p>Modelele direcționate sunt capabile să folosească un anumit tip de substructură pe care modelele nedirecționate nu o pot reprezenta perfect. Această substructură se numește <strong>imoralitate</strong>. Structura apare atunci când două variabile aleatoare <em>a</em> și <em>b</em> sunt ambii părinți ai unei a treia variabile <em>c</em>, și nu există o muchie directă care să-i conecteze pe <em>a</em> și <em>b</em> în nici o direcție. (Numele „imoralitate” poate părea ciudat; a fost împrumutat din literatura modelelor grafice ca o glumă despre părinți necăsătoriți.)</p>
+
+        <p>Pentru a transforma un model direcționat cu graful <em>D</em> într-un model nedirecționat, trebuie să creăm un nou graf <em>U</em>. Pentru fiecare pereche de variabile <em>x</em> și <em>y</em>, adăugăm o muchie nedirecționată conectând <em>x</em> și <em>y</em> la <em>U</em> dacă există o muchie direcționată (în oricare direcție) conectând <em>x</em> și <em>y</em> în <em>D</em> sau dacă <em>x</em> și <em>y</em> sunt ambii părinți în <em>D</em> ai unei a treia variabile <em>z</em>. Grafurile rezultate <em>U</em> sunt cunoscute sub numele de <strong>grafuri moralizate</strong>.</p>
+
+        <h3>Cicluri și Grafuri Chordale</h3>
+        <p>În mod similar, modelele nedirecționate pot include substructuri pe care nici un model direcționat nu le poate reprezenta perfect. În mod specific, un graf direcționat <em>D</em> nu poate captura toate independențele condiționale implicate de un graf nedirecționat <em>U</em> dacă <em>U</em> conține un ciclu de lungime mai mare de trei, cu excepția cazului în care acel ciclu conține și un chord. Un ciclu este o secvență de variabile conectate prin muchii nedirecționate, cu ultima variabilă în secvență conectată înapoi la prima variabilă din secvență. Un chord este o conexiune între două variabile non-consecutive în secvența care definește un ciclu. Dacă <em>U</em> are cicluri de lungime patru sau mai mare și nu are chord-uri pentru aceste cicluri, trebuie să adăugăm chord-urile înainte de a putea să-l convertim într-un model direcționat. Adăugarea acestor chord-uri pierde unele dintre informațiile de independență care au fost codificate în <em>U</em>. Graful format prin adăugarea de chord-uri la <em>U</em> este cunoscut sub numele de graf <strong>chordal</strong> sau <strong>triangulat</strong>, deoarece toate ciclurile pot fi acum descrise în termeni de cicluri mai mici și triunghiulare. Pentru a construi un graf direcționat <em>D</em> din graful chordal, trebuie să atribuim și direcții muchiilor. Atunci când facem acest lucru, nu trebuie să creăm un ciclu direcționat în <em>D</em>, altfel rezultatul nu va defini un model probabilistic direcționat valid.</p>
+    </div>
+</body>
+</html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capitolul 16 - Modele Probabilistice Structurate pentru Învățare Profundă</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #ccc 3px solid;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            text-align: center;
+            margin: 0;
+        }
+        h2 {
+            color: #333;
+        }
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        .figure {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .figure img {
+            max-width: 100%;
+            height: auto;
+        }
+        .figure caption {
+            margin-top: 5px;
+            font-style: italic;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+<div class="container content"> 
+    <h2>16.7.1 Exemplu: Mașina Boltzmann Restricționată</h2>
+    <p>Mașina Boltzmann Restricționată (RBM) (Smolensky, 1986), sau armoniumul, este exemplul esențial al modului în care modelele grafice sunt utilizate pentru învățarea profundă. RBM nu este el însuși un model profund. În schimb, are un singur strat de variabile latente care pot fi utilizate pentru a învăța o reprezentare pentru input. În capitolul 20, vom vedea cum RBM-urile pot fi utilizate pentru a construi modele mai adânci. Aici, arătăm cum RBM exemplifică multe dintre practicile utilizate într-o mare varietate de modele grafice profunde: unitățile sale sunt organizate în grupuri mari numite straturi, conectivitatea între straturi este descrisă de o matrice, conectivitatea este relativ densă, modelul este proiectat pentru a permite eșantionarea Gibbs eficientă, și accentul modelului este pe eliberarea algoritmului de antrenament pentru a învăța variabile latente a căror semnificație nu a fost specificată de designer. În secțiunea 20.2, vom reveni la RBM în mai multe detalii.</p>
+
+    <div class="figure">
+        <img src="figure16.14.png" alt="RBM desenat ca o rețea Markoviană">
+        <div class="caption">Figura 16.14: Un RBM desenat ca o rețea Markoviană.</div>
+    </div>
+
+    <p>RBM-ul clasic este un model bazat pe energie cu unități vizibile și ascunse binare. Funcția sa de energie este:</p>
+    <pre><code>E(v, h) = -b^T v - c^T h - v^T W h,</code></pre>
+    <p>unde <em>b</em>, <em>c</em>, și <em>W</em> sunt parametri reali, învățabili și neconstrânși. Se poate observa că modelul este împărțit în două grupuri de unități: <em>v</em> și <em>h</em>, iar interacțiunea dintre ele este descrisă de o matrice <em>W</em>. Modelul este reprezentat grafic în figura 16.14. Așa cum această figură subliniază, un aspect important al acestui model este că nu există interacțiuni directe între două unități vizibile sau între două unități ascunse (de aici „restrictivă”; o mașină Boltzmann generală poate avea conexiuni arbitrare).</p>
+
+    <p>Restricțiile asupra structurii RBM-ului duc la proprietăți plăcute:</p>
+    <pre><code>p(h | v) = Π_i p(hi | v)</code></pre>
+    <pre><code>p(v | h) = Π_i p(vi | h)</code></pre>
+
+    <div class="figure">
+        <img src="figure16.15.png" alt="Mostre dintr-un RBM antrenat și greutățile sale">
+        <div class="caption">Figura 16.15: Mostre dintr-un model antrenat pe MNIST, desenate folosind eșantionarea Gibbs. Fiecare coloană este un proces de eșantionare Gibbs separat. Fiecare rând reprezintă ieșirea a încă 1.000 de pași de eșantionare Gibbs. Mostrele succesive sunt foarte corelate între ele. Greutățile corespunzătoare sunt afișate pe dreapta.</div>
+    </div>
+
+    <p>Condicionalii individuali sunt, de asemenea, ușor de calculat. Pentru RBM-ul binar, obținem:</p>
+    <pre><code>P(hi = 1 | v) = σ(v^T W_:i + c_i)</code></pre>
+    <pre><code>P(hi = 0 | v) = 1 - σ(v^T W_:i + c_i)</code></pre>
+
+    <p>Împreună, aceste proprietăți permit o eșantionare Gibbs eficientă, care alternează între eșantionarea simultană a tuturor <em>h</em> și eșantionarea simultană a tuturor <em>v</em>. Mostrele generate de eșantionarea Gibbs dintr-un model RBM sunt prezentate în figura 16.15.</p>
+
+    <p>Deoarece funcția de energie însăși este doar o funcție liniară a parametrilor, este ușor să luăm derivatele sale. De exemplu:</p>
+    <pre><code>∂/∂W_i,j E(v, h) = -v_i h_j</code></pre>
+
+    <p>Aceaste două proprietăți—eșantionarea Gibbs eficientă și derivatele eficiente—fac antrenamentul convenabil. În capitolul 18, vom vedea că modelele nedirecționate pot fi antrenate prin calcularea acestor derivate aplicate la mostre din model.</p>
+
+    <p>Antrenarea modelului induce o reprezentare <em>h</em> a datelor <em>v</em>. Putem adesea folosi <em>E[h ∼ p(h|v)][h]</em> ca un set de caracteristici pentru a descrie <em>v</em>.</p>
+
+    <p>În ansamblu, RBM-ul demonstrează abordarea tipică a învățării profunde a modelelor grafice: învățarea reprezentărilor realizată prin straturi de variabile latente, combinată cu interacțiuni eficiente între straturi parametrizate de matrice.</p>
+
+    <p>Limba modelelor grafice oferă un limbaj elegant, flexibil și clar pentru descrierea modelelor probabilistice. În capitolele următoare, folosim acest limbaj, printre alte perspective, pentru a descrie o mare varietate de modele probabilistice profunde.</p>
+</body>
+</html>
