@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capitolul 17 - Metode Monte Carlo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #555;
+        }
+        p {
+            margin: 10px 0;
+        }
+        pre {
+            background: #f4f4f4;
+            border-left: 4px solid #ccc;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Capitolul 17 - Metode Monte Carlo</h1>
+
+<p>Algoritmii randomizați se împart în două categorii principale: algoritmi Las Vegas și algoritmi Monte Carlo. Algoritmii Las Vegas returnează întotdeauna rezultatul corect (sau raportează că au eșuat). Acești algoritmi consumă o cantitate aleatorie de resurse, de obicei memorie sau timp. În contrast, algoritmii Monte Carlo returnează răspunsuri cu o cantitate aleatorie de eroare. Cantitatea de eroare poate fi, de obicei, redusă prin alocarea de mai multe resurse (în general timp de rulare și memorie). Pentru orice buget computațional fix, un algoritm Monte Carlo poate oferi un răspuns aproximativ.</p>
+
+<p>Multe probleme în învățarea automată sunt atât de dificile încât nu ne putem aștepta niciodată să obținem răspunsuri precise la ele. Acest lucru exclude algoritmii deterministici preciși și algoritmii Las Vegas. În schimb, trebuie să folosim algoritmi aproximativi deterministici sau aproximări Monte Carlo. Ambele abordări sunt omniprezente în învățarea automată. În acest capitol, ne concentrăm pe metodele Monte Carlo.</p>
+
+<h2>17.1 Sampling și Metode Monte Carlo</h2>
+
+<p>Multe tehnologii importante utilizate pentru a realiza obiective de învățare automată sunt bazate pe extragerea de mostre dintr-o distribuție de probabilitate și utilizarea acestor mostre pentru a forma o estimare Monte Carlo a unei cantități dorite.</p>
+
+<h3>17.1.1 De ce Sampling?</h3>
+
+<p>Putem dori să extragem mostre dintr-o distribuție de probabilitate din multe motive. Samplingul oferă un mod flexibil de a aproxima multe sume și integrale la un cost redus. Uneori, folosim aceasta pentru a oferi un câștig semnificativ de viteză la o sumă costisitoare dar tractabilă, cum ar fi atunci când sub-samplem costul complet de antrenament cu minibatch-uri. În alte cazuri, algoritmul nostru de învățare necesită aproximarea unei sume sau integrale intractabile, cum ar fi gradientul funcției de partiție logaritmică a unui model nedirecționat. În multe alte cazuri, samplingul este de fapt obiectivul nostru, în sensul că dorim să antrenăm un model care poate extrage mostre din distribuția de antrenament.</p>
+
+<h2>17.1.2 Sampling și Estimare Monte Carlo</h2>
+
+<p>Atunci când o sumă sau o integrală nu poate fi calculată exact (de exemplu, suma are un număr exponențial de termeni și nu se cunoaște o simplificare exactă), este adesea posibil să o aproximăm folosind samplingul Monte Carlo. Ideea este să tratăm suma sau integrală ca și cum ar fi o așteptare sub o anumită distribuție și să aproximăm așteptarea printr-o medie corespunzătoare.</p>
+
+<pre>
+s = Σxp(x)f(x) = E_p[f(x)]
+s = ∫p(x)f(x)dx = E_p[f(x)]
+</pre>
+
+<p>Putem aproxima s prin extragerea a n mostre x(1), ..., x(n) din p și apoi formând media empirică:</p>
+
+<pre>
+ˆs_n = (1/n) Σ_{i=1}^n f(x(i))
+</pre>
+
+<p>Această aproximare este justificată de câteva proprietăți diferite. Prima observație trivială este că estimatorul ˆs este imparțial, deoarece:</p>
+
+<pre>
+E[ˆs_n] = (1/n) Σ_{i=1}^n E[f(x(i))] = (1/n) Σ_{i=1}^n s = s.
+</pre>
+
+<p>De asemenea, legea numerelor mari afirmă că dacă mostrele x(i) sunt i.i.d., atunci media convergă aproape sigur la valoarea așteptată:</p>
+
+<pre>
+lim_{n→∞} ˆs_n = s,
+</pre>
+
+<p>cu condiția ca varianța termenilor individuali, Var[f(x(i))], să fie limitată. Pentru a vedea acest lucru mai clar, considerăm varianța lui ˆs_n pe măsură ce n crește. Varianța Var[ˆs_n] scade și converge la 0, atâta timp cât Var[f(x(i))] < ∞:</p>
+
+<pre>
+Var[ˆs_n] = (1/n^2) Σ_{i=1}^n Var[f(x)] = Var[f(x)] / n.
+</pre>
+
+<p>Acest rezultat convenabil ne spune, de asemenea, cum să estimăm incertitudinea într-o medie Monte Carlo sau, echivalent, cantitatea de eroare așteptată a aproximării Monte Carlo. Calculăm atât media empirică a f(x(i)), cât și varianța lor empirică, și apoi împărțim varianța estimată la numărul de mostre n pentru a obține un estimator al Var[ˆs_n]. Teorema limitelor centrale ne spune că distribuția mediei, ˆs_n, convergă la o distribuție normală cu medie s și varianță Var[f(x)] / n. Acest lucru ne permite să estimăm intervalele de încredere în jurul estimării ˆs_n, folosind distribuția cumulativă a densității normale.</p>
+
+<p>Toate acestea se bazează pe capacitatea noastră de a extrage ușor mostre din distribuția de bază p(x), dar acest lucru nu este întotdeauna posibil. Când nu este fezabil să extragem mostre din p, o alternativă este să folosim samplingul de importanță, prezentat în secțiunea 17.2. O abordare mai generală este să formăm o secvență de estimatori care converg către distribuția de interes. Aceasta este abordarea lanțurilor Markov Monte Carlo (secțiunea 17.3).</p>
+
+<h2>17.2 Samplingul de Importanță</h2>
+
+<p>Un pas important în descompunerea integrandului (sau a sumei) utilizat de metoda Monte Carlo în ecuația 17.2 este deciderea care parte a integrandului ar trebui să joace rolul distribuției de probabilitate p(x) și care parte a integrandului ar trebui să joace rolul cantității f(x) a cărei valoare așteptată (sub acea distribuție de probabilitate) dorim să fie estimată. Nu există o descompunere unică deoarece p(x)f(x) poate fi întotdeauna rescris ca:</p>
+
+<pre>
+p(x)f(x) = q(x) p(x) f(x) / q(x),
+</pre>
+
+<p>unde acum samplem din q și facem media p / q. În multe cazuri, dorim să calculăm o așteptare pentru un p dat și un f, iar faptul că problema este specificată din start ca o așteptare sugerează că acest p și f ar fi o alegere naturală de descompunere. Cu toate acestea, specificația inițială a problemei poate să nu fie cea mai bună alegere în termeni de numărul de mostre necesare pentru a obține un anumit nivel de precizie. Din fericire, forma alegerii optime q* poate fi derivată ușor. q* corespunzătoare ceea ce se numește sampling de importanță optim.</p>
+
+<p>Din cauza identității prezentate în ecuația 17.8, orice estimator Monte Carlo ˆs_p = (1/n) Σ_{i=1}^n x(i) ∼ p f(x(i)) poate fi transformat într-un estimator de sampling de importanță:</p>
+
+<pre>
+ˆs_q = (1/n) Σ_{i=1}^n x(i) ∼ q p(x(i)) f(x(i)) / q(x(i)).
+</pre>
+
+<p>Vedem imediat că valoarea așteptată a estimatorului nu depinde de q:</p>
+
+<pre>
+E_q[ˆs_q] = E_q[ˆs_p] = s.
+</pre>
+
+<p>Varianța unui estimator de sampling de importanță, totuși, poate fi foarte sensibilă la alegerea lui q. Varianța este dată de:</p>
+
+<pre>
+Var[ˆs_q] = Var[p(x) f(x) / q(x)] / n.
+</pre>
+
+<p>Varianța minimă apare atunci când q este:</p>
+
+<pre>
+q*(x) = p(x) | f(x) | / Z,
+</pre>
+
+<p>unde Z este constanta de normalizare, aleasă astfel încât q*(x) să se însumeze sau să integreze la 1 după cum este cazul. Distribuțiile de importanță mai bune pun mai multă greutate acolo unde integrandul este mai mare. De fapt, atunci când f(x) nu își schimbă semnul, Var[ˆs_q*] = 0, ceea ce înseamnă că o singură mostră este suficientă atunci când se folosește distribuția optimă.</p>
+
+<p>Desigur, aceasta este doar pentru că calculul lui q* a rezolvat esențialmente problema originală, deci de obicei nu este practic să folosim această abordare de a trasa o singură mostră din distribuția optimă.</p>
+
+<p>Orice alegere a distribuției de sampling q este validă (în sensul că oferă valoarea așteptată corectă), iar q* este cea optimă (în sensul că oferă varianța minimă). Samplingul din q* este de obicei nepractic, dar alte alegeri de q pot fi fezabile și totodată reducând varianța într-o anumită măsură.</p>
+
+<p>O altă abordare este să folosim samplingul de importanță părtinitor, care are avantajul că nu necesită normalizarea p sau q. În cazul variabilelor discrete, estimatorul de sampling de importanță părtinitor este dat de:</p>
+
+<pre>
+ˆs_BIS = Σ_{i=1}^n p(x(i)) / q(x(i)) f(x(i)) / Σ_{i=1}^n p(x(i)) / q(x(i))
+     = Σ_{i=1}^n p(x(i)) / q(x(i)) f(x(i)) / Σ_{i=1}^n p(x(i)) / q(x(i))
+     = Σ_{i=1}^n ˜p(x(i)) / ˜q(x(i)) f(x(i)) / Σ_{i=1}^n ˜p(x(i)) / ˜q(x(i)),
+</pre>
+
+<p>unde ˜p și ˜q sunt formele nemormalizate ale p și q, și x(i) sunt mostrele din q. Acest estimator este părtinitor deoarece E[ˆs_BIS] ≠ s, cu excepția cazului în care n → ∞ și numărătorul din ecuația 17.14 convergă la 1. Prin urmare, acest estimator se numește părtinitor asimptotic.</p>
+
+<p>Deși o alegere bună a q poate îmbunătăți semnificativ eficiența estimării Monte Carlo, o alegere proastă a q poate face eficiența mult mai rea. Revenind la ecuația 17.12, vedem că dacă există mostre din q pentru care p(x) | f(x) | / q(x) este mare, atunci varianța estimatorului poate deveni foarte mare. Acest lucru poate apărea atunci când q(x) este mic în timp ce nici p(x) nici f(x) nu sunt suficient de mici pentru a-l anula. Distribuția q este de obicei aleasă să fie o distribuție simplă astfel încât să fie ușor de extras mostre din ea. Când x este de dimensiuni mari, această simplificare în q face ca ea să se potrivească prost cu p sau p | f |. Când q(x(i)) << p(x(i)) | f(x(i)) |, samplingul de importanță adună mostre inutile (summing numere mici sau zero). Pe de altă parte, când q(x(i)) >> p(x(i)) | f(x(i)) |, ceea ce se întâmplă mai rar, raportul poate fi uriaș. Deoarece aceste evenimente foarte mari sau foarte mici sunt tipice atunci când x este de dimensiuni mari, din cauza domeniului dinamic al probabilităților comune care poate fi foarte mare.</p>
+
+<p>În ciuda acestui pericol, samplingul de importanță și variantele sale s-au dovedit a fi foarte utile în multe algoritme de învățare automată, inclusiv algoritme de învățare profundă. De exemplu, vedeți utilizarea samplingului de importanță pentru a accelera antrenamentul în modelele de limbaj neural cu un vocabular mare (secțiunea 12.4.3.3) sau alte rețele neurale cu un număr mare de ieșiri. De asemenea, vedeți cum samplingul de importanță a fost utilizat pentru a estima o funcție de partiție (constanta de normalizare a unei distribuții de probabilitate) în secțiunea 18.7 și pentru a estima log-verosimilitudinea în modelele direcționate profunde, cum ar fi autoencoderul variațional, în secțiunea 20.10.3. Samplingul de importanță poate fi utilizat și pentru a îmbunătăți estimarea gradientului funcției de cost utilizate pentru a antrena parametrii modelului cu descendentul stochastic al gradientului, în special pentru modelele, cum ar fi clasificatoarele, în care cea mai mare parte a valorii totale a funcției de cost provine dintr-un număr mic de exemple clasificate greșit. Samplingul mai frecvent al exemplelor mai dificile poate reduce varianța gradientului în astfel de cazuri (Hinton, 2006).</p>
+
+<h2>17.3 Metode Markov Chain Monte Carlo</h2>
+
+<p>În multe cazuri, dorim să folosim o tehnică Monte Carlo, dar nu există o metodă tractabilă pentru a trasa mostre exacte din distribuția p_model(x) sau dintr-o bună distribuție de importanță (cu varianță mică) q(x). În contextul învățării profunde, acest lucru se întâmplă cel mai frecvent atunci când p_model(x) este reprezentată de un model nedirecționat. În aceste cazuri, introducem un instrument matematic numit lanț Markov pentru a extrage aproximativ mostre din p_model(x). Familia de algoritmi care utilizează lanțuri Markov pentru a efectua estimări Monte Carlo se numește Metode Markov Chain Monte Carlo (MCMC). Metodele Markov Chain Monte Carlo pentru învățarea automată sunt descrise în detaliu în Koller și Friedman (2009). Cele mai standard garanții generice pentru tehnicile MCMC sunt aplicabile doar atunci când modelul nu alocă probabilitate zero niciunui stadiu. Prin urmare, este cel mai convenabil să prezentăm aceste tehnici ca sampling dintr-un model bazat pe energie (EBM) p(x) ∝ exp(-E(x)), așa cum este descris în secțiunea 16.2.4. În formularea EBM, fiecare stare are o probabilitate nenulă. Metodele MCMC sunt de fapt mai general aplicabile și pot fi utilizate cu multe distribuții de probabilitate care conțin stări cu probabilitate zero. Cu toate acestea, garanțiile teoretice referitoare la comportamentul metodelor MCMC trebuie să fie dovedite de la caz la caz pentru diferite familii de astfel de distribuții. În contextul învățării profunde, este cel mai frecvent să ne bazăm pe garanțiile teoretice generale care se aplică în mod natural tuturor modelelor bazate pe energie.</p>
+
+<p>Pentru a înțelege de ce extragerea mostrelor dintr-un model bazat pe energie este dificilă, considerăm un EBM pentru doar două variabile, definind o distribuție p(a, b). Pentru a extrage a, trebuie să tragem a din p(a | b), iar pentru a extrage b, trebuie să o tragem din p(b | a). Pare a fi o problemă imposibilă de tipul găină și ou. Modelele direcționate evită aceasta pentru că graficele lor sunt direcționate și aciclice. Pentru a realiza samplingul, se extrage pur și simplu fiecare variabilă în ordinea topologică, condiționând pe părinții fiecărei variabile, care sunt garantați că au fost deja prelucrați. În schimb, graficele nedirecționate permit cicluri și conexiuni între variabile, iar noi trebuie să folosim un lanț Markov pentru a efectua samplingul.</p>
+
+<p>Un lanț Markov este o secvență de stări x(0), x(1), ... în care probabilitatea de a fi în starea x(i+1) depinde doar de starea curentă x(i) și nu de stările anterioare. Acest lucru se numește proprietatea Markov. Mai formal, un lanț Markov este definit de distribuția de probabilitate inițială p(x(0)) și de o funcție de tranziție p(x(i+1) | x(i)) care descrie probabilitatea de a fi în starea x(i+1) dacă am fost în starea x(i). </p>
+
+<p>Într-un lanț Markov pentru samplingul MCMC, distribuția de tranziție p(x(i+1) | x(i)) este aleasă astfel încât lanțul să converge către distribuția țintă p_model(x). În alte cuvinte, lanțul este proiectat astfel încât distribuția sa staționară (sau distribuția limită) să fie distribuită conform distribuției țintă. Lanțurile Markov Monte Carlo sunt utile în cazul în care distribuția de tranziție este construită astfel încât lanțul Markov să convergă către distribuția țintă p_model(x). De asemenea, lanțul trebuie să fie „ergodic”, adică să fie capabil să acceseze toată spațiul stărilor din distribuția țintă.</p>
+
+<p>Pentru a simplifica algoritmii MCMC și pentru a explica principiile lor, luăm în considerare un model bazat pe energie, numit Gibbs sampling, care poate extrage mostre dintr-un EBM, p(x) ∝ exp(-E(x)). În Gibbs sampling, extragem mostre pe baza distribuției condiționate pentru fiecare variabilă. De exemplu, pentru un model bazat pe energie cu două variabile, a și b, probabilitatea de a extrage variabila a este:</p>
+
+<pre>
+p(a | b) ∝ exp(-E(a, b))
+</pre>
+
+<p>Similar, probabilitatea de a extrage b este:</p>
+
+<pre>
+p(b | a) ∝ exp(-E(a, b)).
+</pre>
+
+
+    
+    <!-- Secțiunea 17.4 Gibbs Sampling -->
+    <h2>17.4 Gibbs Sampling</h2>
+    <p>Până acum am descris cum să extragem mostre dintr-o distribuție q(x) prin actualizarea repetată x ← x′∼ T(x′| x). Nu am descris cum să ne asigurăm că q(x) este o distribuție utilă. Două abordări de bază sunt considerate în această carte. Prima este să derivăm T dintr-un model învățat p, descris mai jos în cazul samplingului din EBMs. A doua este să parametrizăm direct T și să-l învățăm astfel încât distribuția sa staționară să definească implicit modelul p de interes. Exemple ale acestei a doua abordări sunt discutate în secțiunile 20.12 și 20.13.</p>
+    <p>În contextul învățării profunde, folosim de obicei lanțuri Markov pentru a extrage mostre dintr-un model bazat pe energie care definește o distribuție pmodel(x). În acest caz, vrem ca q(x) pentru lanțul Markov să fie pmodel(x). Pentru a obține q(x) dorit, trebuie să alegem un T (x′| x) adecvat.</p>
+    <p>O abordare conceptual simplă și eficientă pentru a construi un lanț Markov care extrage mostre din pmodel(x) este să folosim Gibbs sampling, în care samplingul din T(x′| x) se realizează prin selectarea unei variabile xi și extragerea acesteia din pmodel condiționat de vecinii săi în graful nedirijat G care definește structura modelului bazat pe energie. De asemenea, putem extrage simultan mai multe variabile atâta timp cât sunt condiționat independente date toate vecinii lor. După cum se arată în exemplul RBM din secțiunea 16.7.1, toate unitățile ascunse ale unui RBM pot fi extrase simultan deoarece sunt condiționat independente între ele date toate unitățile vizibile. În mod similar, toate unitățile vizibile pot fi extrase simultan deoarece sunt condiționat independente între ele date toate unitățile ascunse. Gibbs samplingul care actualizează multe variabile simultan în acest mod se numește Gibbs sampling bloc.</p>
+    <p>Abordări alternative pentru proiectarea lanțurilor Markov pentru a extrage mostre din pmodel sunt posibile. De exemplu, algoritmul Metropolis-Hastings este utilizat pe scară largă în alte discipline. În contextul abordării de învățare profundă pentru modelare nedirijată, este rar să folosim o altă abordare în afară de Gibbs sampling. Tehnicile îmbunătățite de sampling sunt una dintre frontierele de cercetare posibile.</p>
+
+    <!-- Secțiunea 17.5.1 Tempering to Mix between Modes -->
+    <h2>17.5.1 Tempering pentru Amestecarea între Moduri</h2>
+    <p>Când o distribuție are vârfuri ascuțite de probabilitate ridicată înconjurate de regiuni de probabilitate scăzută, este dificil să amesteci între diferitele moduri ale distribuției. Mai multe tehnici pentru amestecare mai rapidă se bazează pe construirea unor versiuni alternative ale distribuției țintă în care vârfurile nu sunt la fel de ridicate și văile din jur nu sunt la fel de adânci. Modelele bazate pe energie oferă un mod deosebit de simplu de a face acest lucru. Până acum, am descris un model bazat pe energie ca definind o distribuție de probabilitate p(x) ∝ exp (−E(x)). Modelele bazate pe energie pot fi augmentate cu un parametru suplimentar β care controlează cât de ascuțită este distribuția: pβ(x) ∝ exp (−βE(x)). Parametrul β este adesea descris ca fiind reciprocul temperaturii, reflectând originea modelelor bazate pe energie în fizica statistică. Când temperatura scade la zero, iar β crește la infinit, modelul bazat pe energie devine determinist. Când temperatura crește la infinit, iar β scade la zero, distribuția (pentru x discret) devine uniformă.</p>
+    <p>De obicei, un model este antrenat pentru a fi evaluat la β = 1. Cu toate acestea, putem folosi alte temperaturi, în special acelea în care β < 1. Temperingul este o strategie generală de amestecare între moduri ale p1 rapid prin extragerea de mostre cu β < 1. Lanțurile Markov bazate pe tranziții temperate (Neal, 1994) samplează temporar din distribuții cu temperatură mai mare pentru a amesteca diferite moduri, apoi reiau samplingul din distribuția cu temperatura unității. Aceste tehnici au fost aplicate la modele precum RBMs (Salakhutdinov, 2010). O altă abordare este utilizarea temperării paralele (Iba, 2001), în care lanțul Markov simulează multe stări diferite în paralel, la diferite temperaturi. Statele cu temperatura cea mai mare se amestecă lent, în timp ce stările cu temperatura cea mai mică, la temperatura 1, oferă mostre precise din model. Operatorul de tranziție include swapping stocastic între două niveluri de temperatură diferite, astfel încât o mostră cu o probabilitate suficient de mare dintr-un slot cu temperatură mare să poată sări într-un slot cu temperatură mai mică. Această abordare a fost de asemenea aplicată la RBMs (Desjardins et al., 2010; Cho et al., 2010). Deși temperingul este o abordare promițătoare, în acest moment nu a permis cercetătorilor să facă un progres semnificativ în rezolvarea provocării samplingului din EBMs complexe. Un motiv posibil este că există temperaturi critice în jurul cărora tranziția temperaturii trebuie să fie foarte lentă (pe măsură ce temperatura este redusă treptat) pentru ca temperingul să fie eficient.</p>
+
+    <!-- Secțiunea 17.5.2 Depth May Help Mixing -->
+    <h2>17.5.2 Adâncimea Poate Ajuta Amestecarea</h2>
+    <p>Când extragem mostre dintr-un model cu variabile latente p(h, x), am observat că dacă p(h | x) codifică x prea bine, atunci samplingul din p(x | h) nu va schimba foarte mult x și amestecarea va fi slabă. Una dintre modalitățile de a rezolva această problemă este să facem h o reprezentare profundă, codificând x în h într-un mod care să permită unui lanț Markov în spațiul h să se amestece mai ușor. Multe algoritme de învățare a reprezentărilor, cum ar fi autoencoderele și RBMs, tind să genereze o distribuție marginală asupra h care este mai uniformă și mai unimodală decât distribuția originală a datelor asupra x. Se poate argumenta că aceasta rezultă din încercarea de a minimiza eroarea de reconstrucție utilizând tot spațiul de reprezentare disponibil, deoarece minimizarea erorii de reconstrucție asupra exemplarelor de antrenament va fi mai bine realizată atunci când diferitele exemple de antrenament sunt ușor distingeabile între ele în spațiul h și, astfel, bine separate. Bengio et al. (2013a) au observat că stivele mai adânci de autoencodere regulizate sau RBMs produc distribuții marginale în spațiul h de nivel superior care par mai răspândite și mai uniforme, cu mai puțin de un gol între regiunile corespunzătoare diferitelor moduri (categorii, în experimente). Antrenarea unui RBM în acel spațiu de nivel superior a permis Gibbs samplingului să se amestece mai repede între moduri. Totuși, nu este clar cum să se profite de această observație pentru a ajuta la antrenarea și samplingul din modelele generative adânci.</p>
+    <p>În ciuda dificultății de amestecare, tehnicile Monte Carlo sunt utile și sunt adesea cel mai bun instrument disponibil. Într-adevăr, ele sunt instrumentul principal utilizat pentru a confrunta funcții de partitii de probabilitate (secțiunea 18.7) și funcții de cost pentru modelele generative (secțiunea 20.10.3) care sunt foarte costisitoare.</p>
+
+</body>
+</html>
